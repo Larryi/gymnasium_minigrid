@@ -1,0 +1,7 @@
+runs/
+trained_models/
+**/.env
+.vscode/
+**/__pycache__/
+**/.DS_Store
+*.pyc
