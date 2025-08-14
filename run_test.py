@@ -15,10 +15,11 @@ def main():
     env_config = {
         "width": 40,
         "height": 40,
+        "max_steps": 250,
         # "enemy_locations": [(5, 5), (5, 30), (30, 5)],
         "enemy_locations": [(None, None), (None, None), (None, None), (None, None)],
-        "fixed_agent_loc": (20, 20),
-        "fixed_goal_loc": (35, 35),
+        # "fixed_agent_loc": (20, 20),
+        # "fixed_goal_loc": (35, 35),
         "danger_radius": 15,
         "danger_threshold": 0.7,
         "init_safe_threshold": 0.3,
