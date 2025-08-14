@@ -10,50 +10,15 @@ from ..rendering.pygame_renderer import PyGameRenderer
 
 # --- 默认危险函数 ---
 # 这是一个简单的默认实现，计算危险值。
-# 危险值会随着与最近敌人的曼哈顿距离的增加而线性衰减。
-# 您可以随时编写自己的函数来替换它。
+
 def default_danger_func(grid_shape, enemy_locations, danger_radius):
     """
-    计算网格上每个点的危险值。
+    以每个敌人为中心，生成危险场。
 
     参数:
         grid_shape (tuple): 网格的 (高度, 宽度)。
         enemy_locations (np.ndarray): 敌人位置的数组, shape=(N, 2)。
-        danger_radius (int): 危险的有效半径。
-
-    返回:
-        np.ndarray: 一个与网格相同大小的浮点数组，表示危险值。
-    """
-    height, width = grid_shape
-    danger_map = np.zeros((height, width), dtype=np.float32)
-    if enemy_locations.shape[0] == 0:
-        return danger_map
-
-    # 创建一个坐标网格
-    h_indices, w_indices = np.indices((height, width))
-    
-    # 计算每个格子到所有敌人的曼哈顿距离
-    # dists.shape will be (height, width, num_enemies)
-    dists = np.abs(h_indices[:, :, np.newaxis] - enemy_locations[:, 0]) + \
-            np.abs(w_indices[:, :, np.newaxis] - enemy_locations[:, 1])
-
-    # 找到每个格子到最近敌人的距离
-    min_dist = np.min(dists, axis=2)
-
-    # 根据距离计算危险值，距离越近，危险值越高
-    # 当距离为0时，危险值为1.0；当距离大于等于半径时，危险值为0
-    danger_map = np.maximum(0, 1.0 - min_dist / danger_radius).astype(np.float32)
-    
-    return danger_map
-
-def gaussian_danger_func(grid_shape, enemy_locations, danger_radius):
-    """
-    以每个敌人为中心，生成高斯分布的危险场。
-
-    参数:
-        grid_shape (tuple): 网格的 (高度, 宽度)。
-        enemy_locations (np.ndarray): 敌人位置的数组, shape=(N, 2)。
-        danger_radius (int): 控制高斯分布的标准差（越大扩散越广）。
+        danger_radius (int): 控制危险区域的半径（越大范围越广）。
 
     返回:
         np.ndarray: 一个与网格相同大小的浮点数组，表示危险值。
@@ -66,7 +31,6 @@ def gaussian_danger_func(grid_shape, enemy_locations, danger_radius):
     h_indices, w_indices = np.indices((height, width))
     for r, c in enemy_locations:
         dist_sq = (h_indices - r) ** 2 + (w_indices - c) ** 2
-        # 高斯分布，sigma由danger_radius控制，归一化到[0,1]
         sigma = danger_radius / 2.0
         gauss = np.exp(-dist_sq / (2 * sigma ** 2))
         danger_map = np.maximum(danger_map, gauss.astype(np.float32))
@@ -85,18 +49,13 @@ class GridWorldEnv(gym.Env):
     ### 动作空间
     Agent有4个离散动作: 0 (上), 1 (下), 2 (左), 3 (右)。
 
-    ### 奖励
-    - 到达终点: +1.0
-    - 撞墙或进入危险区域: -1.0
-    - 每走一步: -0.01 (鼓励尽快完成)
-
     ### 回合结束 (Termination)
-    - Agent到达终点。
-    - Agent撞上障碍物。
-    - Agent所在格子的危险值超过阈值。
+    - Agent到达终点
+    - Agent撞上障碍物
+    - Agent所在格子的危险值超过阈值
 
     ### 回合截断 (Truncation)
-    - 达到最大步数限制。
+    - 达到最大步数限制
     """
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 10}
 
@@ -108,7 +67,7 @@ class GridWorldEnv(gym.Env):
         obstacle_map=None,
         vision_radius=5,
         use_global_obs=False,
-        danger_func=gaussian_danger_func,
+        danger_func=default_danger_func,
         danger_radius=4,
         danger_threshold=0.7,
         init_safe_threshold=0.3,
