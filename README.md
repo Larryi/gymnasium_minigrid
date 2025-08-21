@@ -57,8 +57,8 @@
 | `width`/`height`      | int        | 地图宽/高，支持自定义尺寸（如 40x40）                                                      |
 | `max_steps`           | int        | 最大步数限制，达到该步数后自动截断回合                                                     |
 | `enemy_locations`     | list       | 敌人初始位置，给定则为确定位置[(x, y), ...]，传递[(None, None), ...]则为随机在安全区域出生 |
-| `fixed_agent_loc`     | tuple/None | Agent 初始位置，(x, y)为确定位置，None则为随机在安全区域出生                       |
-| `fixed_goal_loc`      | tuple/None | 目标初始位置，(x, y)为确定位置，None则为随机在安全区域出生                         |
+| `fixed_agent_loc`     | tuple      | Agent 初始位置，(x, y)为确定位置，(None, None)则为随机在安全区域出生                       |
+| `fixed_goal_loc`      | tuple      | 目标初始位置，(x, y)为确定位置，(None, None)则为随机在安全区域出生                         |
 | `danger_radius`       | int        | 危险区域影响半径，供危险区生成函数使用                                                     |
 | `danger_threshold`    | float      | 危险区域的判定阈值，Agent 所处位置的危险系数高于此值则进行惩罚并终止环境                   |
 | `init_safe_threshold` | float      | 出生时，安全区域的危险系数判定阈值，只有低于此值的位置才可以被选中为安全出生位置           |
