@@ -57,8 +57,8 @@
 | `width`/`height`      | int        | 地图宽/高，支持自定义尺寸（如 40x40）                                                      |
 | `max_steps`           | int        | 最大步数限制，达到该步数后自动截断回合                                                     |
 | `enemy_locations`     | list       | 敌人初始位置，给定则为确定位置[(x, y), ...]，传递[(None, None), ...]则为随机在安全区域出生 |
-| `fixed_agent_loc`     | tuple/None | Agent 初始位置，(x, y)为确定位置，(None, None)则为随机在安全区域出生                       |
-| `fixed_goal_loc`      | tuple/None | 目标初始位置，(x, y)为确定位置，(None, None)则为随机在安全区域出生                         |
+| `fixed_agent_loc`     | tuple/None | Agent 初始位置，(x, y)为确定位置，None则为随机在安全区域出生                       |
+| `fixed_goal_loc`      | tuple/None | 目标初始位置，(x, y)为确定位置，None则为随机在安全区域出生                         |
 | `danger_radius`       | int        | 危险区域影响半径，供危险区生成函数使用                                                     |
 | `danger_threshold`    | float      | 危险区域的判定阈值，Agent 所处位置的危险系数高于此值则进行惩罚并终止环境                   |
 | `init_safe_threshold` | float      | 出生时，安全区域的危险系数判定阈值，只有低于此值的位置才可以被选中为安全出生位置           |
@@ -120,9 +120,9 @@ python run_test.py
 
 ```bash
 # 训练
-python ppo_cleanrl_torch.py --num-envs 8 --total-timesteps 500000
+python ppo_cleanrl_torch.py --config config/ppo_train.yaml
 # 测试
-python ppo_cleanrl_torch.py --test --load-path trained_models/xxx/model.pt --render
+python ppo_cleanrl_torch.py --config config/ppo_test.yaml
 ```
 
 说明：
@@ -138,11 +138,12 @@ run_test.py                 # 环境交互与可视化
 ppo_cleanrl_torch.py        # PPO算法的训练测试脚本
 runs/                       # 日志与配置
 trained_models/             # 训练模型
+config/                     # 配置文件
 ```
 
 ## TODO
 
-- [ ] 添加YAML配置文件，支持环境参数和超参数的外部管理，统一实验管理
+- [x] 添加YAML配置文件，支持环境参数和超参数的外部管理，统一实验管理
 - [ ] 允许敌人 Agent 随时间推移而运动
 - [ ] 添加更多的 RL 算法支持
 - [ ] 添加 JAX 训练脚本的支持
