@@ -3,7 +3,7 @@
 import gymnasium as gym
 import time
 
-import gymnasium_minigrid
+from gymnasium_minigrid.core.config_utils import resolve_callable
 import numpy as np
 
 def main():
@@ -25,7 +25,8 @@ def main():
         "use_global_obs": False,  # 设置为True以查看完整的地图
         "vision_radius": 10,
         "render_mode": "human",  # 设置为 "human" 以显示PyGame窗口
-        "debug_mode": True  # 设置为Debug模式，输出更多信息
+        "debug_mode": True,  # 设置为Debug模式，输出更多信息
+        "danger_func": resolve_callable('circular_danger_func')
     }
 
     # 使用 gymnasium.make 创建环境实例，使用**env_config解包传参来覆盖默认参数

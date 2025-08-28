@@ -19,6 +19,7 @@ config_utils.py
     RuntimeError 如果无法解析
 """
 import importlib
+import os
 
 
 def resolve_callable(name_or_obj, candidate_modules=None):
@@ -44,11 +45,8 @@ def resolve_callable(name_or_obj, candidate_modules=None):
 
     # 候选模块列表
     candidate_modules = candidate_modules or [
-        "gymnasium_minigrid.core",
-        "gymnasium_minigrid.envs",
-        "gymnasium_minigrid.rendering",
-        "gymnasium_minigrid",
-        "utils",
+        "gymnasium_minigrid.utils"
+
     ]
     for mod_path in candidate_modules:
         try:
@@ -57,7 +55,30 @@ def resolve_callable(name_or_obj, candidate_modules=None):
                 obj = getattr(mod, name_or_obj)
                 if callable(obj):
                     return obj
+            # 如果模块是包且未直接包含属性，尝试扫描包下的子模块文件
+            if hasattr(mod, '__path__'):
+                try:
+                    pkg_path = list(mod.__path__)[0]
+                    for fname in os.listdir(pkg_path):
+                        if not fname.endswith('.py'):
+                            continue
+                        if fname == '__init__.py':
+                            continue
+                        submodule_name = fname[:-3]
+                        full_submodule = f"{mod_path}.{submodule_name}"
+                        try:
+                            submod = importlib.import_module(full_submodule)
+                            if hasattr(submod, name_or_obj):
+                                obj = getattr(submod, name_or_obj)
+                                if callable(obj):
+                                    return obj
+                        except Exception:
+                            continue
+                except Exception:
+                    pass
         except Exception:
             continue
 
-    raise RuntimeError(f"无法解析函数名 '{name_or_obj}' 为callable。")
+    raise RuntimeError(
+        f"无法解析函数名 '{name_or_obj}' 为可调用对象。"
+    )
