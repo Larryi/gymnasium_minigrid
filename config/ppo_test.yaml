@@ -1,0 +1,32 @@
+# PPO/算法与环境参数的YAML配置示例
+# 支持多种算法类型（如ppo, dqn, sac等）
+
+env:
+  width: 40
+  height: 40
+  # 3个随机出生敌人
+  enemy_locations:
+    - [null, null]
+    - [null, null]
+    - [null, null]
+  danger_radius: 15
+  danger_threshold: 0.7
+  init_safe_threshold: 0.3
+  # 局部观测
+  use_global_obs: false
+  vision_radius: 10
+  max_steps: 250
+  render_mode: human
+  debug_mode: false
+  # 己方Agent随机出生
+  fixed_agent_loc: null
+  # 目标位置随机选取
+  fixed_goal_loc: null
+
+ppo:
+  load_path: null                 # 预训练模型路径，请手动指定
+  track: true                     # 是否启用实验追踪
+  seed: 1                         # 随机种子
+  cuda: false                     # 是否使用CUDA设备
+  torch_deterministic: true       # PyTorch 是否确定性
+  test: true                      # 测试模式

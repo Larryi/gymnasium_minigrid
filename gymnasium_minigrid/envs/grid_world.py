@@ -185,13 +185,25 @@ class GridWorldEnv(gym.Env):
             agent_loc = fixed_agent_loc
         if fixed_goal_loc is not None:
             goal_loc = fixed_goal_loc
+        # 统一输入格式：Agent/Goal 仅接受二元 tuple/list，且若包含 None 则表示随机
+        if isinstance(agent_loc, (tuple, list)):
+            if len(agent_loc) != 2:
+                raise ValueError("fixed_agent_loc 必须是长度为2的 tuple/list 或 None")
+            # 若任一元素为 None，则视为随机（等同于 None）
+            if agent_loc[0] is None or agent_loc[1] is None:
+                agent_loc = None
+        if isinstance(goal_loc, (tuple, list)):
+            if len(goal_loc) != 2:
+                raise ValueError("fixed_goal_loc 必须是长度为2的 tuple/list 或 None")
+            if goal_loc[0] is None or goal_loc[1] is None:
+                goal_loc = None
 
         if agent_loc is not None:
-            self._agent_location = np.array(agent_loc)
+            self._agent_location = np.array(agent_loc, dtype=int)
         else:
             self._agent_location = self._get_random_empty_cell()
         if goal_loc is not None:
-            self._goal_location = np.array(goal_loc)
+            self._goal_location = np.array(goal_loc, dtype=int)
         else:
             self._goal_location = self._get_random_empty_cell()
         while np.array_equal(self._agent_location, self._goal_location):

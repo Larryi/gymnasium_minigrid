@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_continuous_actionpy
 import argparse
+import sys
 import os
+from copy import deepcopy
+from gymnasium_minigrid.core.config_loader import load_config, get_config_for_run
 import random
 import time
-from distutils.util import strtobool
 from collections import deque
 
 import gymnasium as gym
@@ -15,96 +17,66 @@ import torch.optim as optim
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-import gymnasium_minigrid
-
 def parse_args():
-    # fmt: off
     parser = argparse.ArgumentParser()
-    # 测试相关参数
-    parser.add_argument("--test", action="store_true", help="是否进入测试模式（只评估模型，不训练）")
-    parser.add_argument("--test-episodes", type=int, default=10, help="测试时运行的episode数")
-    parser.add_argument("--render", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True, help="测试时是否渲染环境")
-    parser.add_argument("--exp-name", type=str, default=os.path.basename(__file__).rstrip(".py"),
-        help="实验名称")
-    parser.add_argument("--seed", type=int, default=1,
-        help="实验的随机种子")
-    parser.add_argument("--torch-deterministic", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="如开启，则设置torch.backends.cudnn.deterministic=True，保证实验可复现")
-    parser.add_argument("--cuda", type=lambda x: bool(strtobool(x)), default=False, nargs="?", const=True,
-        help="如开启，则默认使用CUDA加速")
-    parser.add_argument("--track", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="如开启，则使用TensorBoard记录实验")
+    parser.add_argument("--config", type=str, required=True, help="YAML配置文件路径")
+    parsed = parser.parse_args()
 
-    # 算法相关的超参数
-    parser.add_argument("--env-id", type=str, default="gymnasium_minigrid/GridWorld-v0",
-        help="环境的ID")
-    parser.add_argument("--total-timesteps", type=int, default=500000,
-        help="训练的总步数")
-    parser.add_argument("--learning-rate", type=float, default=2.5e-4,
-        help="优化器的学习率")
-    parser.add_argument("--num-envs", type=int, default=8,
-        help="并行环境数量")
-    parser.add_argument("--async-envs", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="如开启，则使用AsyncVectorEnv实现真正并行；如关闭，则使用SyncVectorEnv")
-    parser.add_argument("--num-steps", type=int, default=128,
-        help="每个环境每次采样的步数")
-    parser.add_argument("--anneal-lr", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="是否对学习率进行退火")
-    parser.add_argument("--gamma", type=float, default=0.99,
-        help="折扣因子γ")
-    parser.add_argument("--gae-lambda", type=float, default=0.95,
-        help="GAE的λ参数")
-    parser.add_argument("--num-minibatches", type=int, default=4,
-        help="每次更新的mini-batch数量")
-    parser.add_argument("--update-epochs", type=int, default=4,
-        help="每次更新的epoch数")
-    parser.add_argument("--norm-adv", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="是否对优势函数进行归一化")
-    parser.add_argument("--clip-coef", type=float, default=0.2,
-        help="PPO裁剪系数")
-    parser.add_argument("--clip-vloss", type=lambda x: bool(strtobool(x)), default=True, nargs="?", const=True,
-        help="是否对价值函数损失进行裁剪")
-    parser.add_argument("--ent-coef", type=float, default=0.01,
-        help="熵损失的系数")
-    parser.add_argument("--vf-coef", type=float, default=0.5,
-        help="价值函数损失的系数")
-    parser.add_argument("--max-grad-norm", type=float, default=0.5,
-        help="梯度裁剪的最大范数")
-    parser.add_argument("--target-kl", type=float, default=None,
-        help="目标KL散度阈值，超过则提前停止本轮更新")
+    config = load_config(parsed.config)
+    env_config, algo_config = get_config_for_run(config, algo="ppo")
 
+    args = argparse.Namespace()
 
-    # 保存和加载模型的参数
-    parser.add_argument("--save-path", type=str, default="trained_models/ppo_gridworld.pt",
-        help="模型保存路径")
-    parser.add_argument("--load-path", type=str, default=None,
-        help="加载预训练模型的路径（用于继续训练）")
-    parser.add_argument("--save-freq", type=int, default=20000,
-        help="每隔多少 global_step 自动保存一次模型（0 表示只在训练结束时保存）")
+    defaults = {
+        "env_id": "gymnasium_minigrid/GridWorld-v0",
+        "exp_name": os.path.basename(__file__).rstrip(".py"),
+        "seed": 1,
+        "torch_deterministic": True,
+        "cuda": False,
+        "track": True,
+        "test": False,
+        "test_episodes": 10,
+        "render": False,
+        "num_envs": 8,
+        "num_steps": 128,
+        "num_minibatches": 4,
+        "save_path": "trained_models/ppo_gridworld.pt",
+        "load_path": None,
+        "save_freq": 20000,
+        "total_timesteps": 500000,
+        "learning_rate": 2.5e-4,
+        "async_envs": True,
+    }
+    for k, v in defaults.items():
+        setattr(args, k, v)
 
-    args = parser.parse_args()
+    # algo参数
+    for k, v in (algo_config or {}).items():
+        setattr(args, k, v)
+    # env参数
+    for k, v in (env_config or {}).items():
+        setattr(args, k, v)
+
+    # 计算batch sizes
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
-    # fmt: on
+
     return args
 
 
 def make_env(env_id, seed, idx, run_name):
     """创建单个环境的辅助函数"""
     def thunk():
-        # 在这里可以为每个并行环境设置不同的参数
-        # 可根据需要随机生成agent、enemy、goal等初始位置
-        env_config = {
+        # 支持通过全局变量传递env_config（由主程序注入）
+        global GLOBAL_ENV_CONFIG
+        env_config = deepcopy(GLOBAL_ENV_CONFIG) if 'GLOBAL_ENV_CONFIG' in globals() else {
             "width": 40,
             "height": 40,
-            # "enemy_locations": [(5, 5), (5, 30), (30, 5)],
             "enemy_locations": [(None, None), (None, None), (None, None)],
-            # "fixed_agent_loc": (20, 20),
-            # "fixed_goal_loc": (35, 35),
             "danger_radius": 15,
             "danger_threshold": 0.7,
             "init_safe_threshold": 0.3,
-            "use_global_obs": False, # 局部视野更佳
+            "use_global_obs": False,
             "vision_radius": 10
         }
         # 记录环境参数到Log
@@ -115,7 +87,6 @@ def make_env(env_id, seed, idx, run_name):
             f.write(f"env_idx={idx}, seed={seed}, config={env_config}\n")
 
         env = gym.make(env_id, **env_config)
-        # 用Wrapper记录每个回合的奖励和长度
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
         return env
@@ -208,11 +179,19 @@ class Agent(nn.Module):
 if __name__ == "__main__":
     args = parse_args()
 
+    # --- 注入全局env_config供make_env使用 ---
+    global GLOBAL_ENV_CONFIG
+    GLOBAL_ENV_CONFIG = {}
+    for k in [
+        "width", "height", "enemy_locations", "danger_radius", "danger_threshold", "init_safe_threshold",
+        "use_global_obs", "vision_radius", "max_steps", "render_mode", "debug_mode", "fixed_agent_loc", "fixed_goal_loc", "obstacle_map"
+    ]:
+        if hasattr(args, k):
+            GLOBAL_ENV_CONFIG[k] = getattr(args, k)
+
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
-    # 自动设置模型保存路径为 trained_models/{run_name}/model.pt
     args.save_path = os.path.join("trained_models", run_name, "model.pt")
 
-    # 设置随机种子
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)

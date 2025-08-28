@@ -1,0 +1,50 @@
+# PPO/算法与环境参数的YAML配置示例
+# 支持多种算法类型（如ppo, dqn, sac等）
+
+env:
+  width: 40
+  height: 40
+  # 3个随机出生敌人
+  enemy_locations:
+    - [null, null]
+    - [null, null]
+    - [null, null]
+  danger_radius: 15
+  danger_threshold: 0.7
+  init_safe_threshold: 0.3
+  # 局部观测
+  use_global_obs: false
+  vision_radius: 10
+  max_steps: 250
+  render_mode: null
+  debug_mode: false
+  # 己方Agent随机出生
+  fixed_agent_loc: null
+  # 目标位置随机选取
+  fixed_goal_loc: null
+
+ppo:
+  exp_name: PPO_Basic_x           # 实验名
+  total_timesteps: 500000         # 总训练步数
+  learning_rate: 0.00025          # 学习率
+  num_envs: 8                     # 并行环境数
+  async_envs: true                # 开启异步环境
+  num_steps: 128                  # 每个env的采样步数
+  anneal_lr: true                 # 是否线性衰减 lr
+  gamma: 0.99                     # 折扣因子
+  gae_lambda: 0.95                # GAE 的 lambda
+  num_minibatches: 4              # minibatch 划分数
+  update_epochs: 4                # 每次更新的 epoch 数
+  norm_adv: true                  # 是否归一化优势值
+  clip_coef: 0.2                  # PPO 裁剪系数
+  clip_vloss: true                # 是否裁剪价值损失
+  ent_coef: 0.01                  # 熵正则系数
+  vf_coef: 0.5                    # 价值损失权重
+  max_grad_norm: 0.5              # 梯度裁剪阈值
+  target_kl: null                 # 目标KL（null表示不启用）
+  save_freq: 10000                # 模型保存间隔（步）
+  load_path: null                 # 预训练模型路径或null
+  track: true                     # 是否启用实验追踪
+  seed: 1                         # 随机种子
+  cuda: false                     # 是否使用CUDA设备
+  torch_deterministic: true       # PyTorch 是否确定性
