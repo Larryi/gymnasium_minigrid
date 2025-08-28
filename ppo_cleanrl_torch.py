@@ -189,6 +189,14 @@ if __name__ == "__main__":
         if hasattr(args, k):
             GLOBAL_ENV_CONFIG[k] = getattr(args, k)
 
+    # 解析 danger_func
+    try:
+        from gymnasium_minigrid.core.config_utils import resolve_callable
+        if "danger_func" in GLOBAL_ENV_CONFIG and GLOBAL_ENV_CONFIG["danger_func"] is not None:
+            GLOBAL_ENV_CONFIG["danger_func"] = resolve_callable(GLOBAL_ENV_CONFIG["danger_func"])
+    except Exception:
+        pass
+
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     args.save_path = os.path.join("trained_models", run_name, "model.pt")
 
