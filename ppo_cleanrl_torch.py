@@ -184,7 +184,7 @@ if __name__ == "__main__":
     GLOBAL_ENV_CONFIG = {}
     for k in [
         "width", "height", "enemy_locations", "danger_radius", "danger_threshold", "init_safe_threshold",
-        "use_global_obs", "vision_radius", "max_steps", "render_mode", "debug_mode", "fixed_agent_loc", "fixed_goal_loc", "obstacle_map"
+        "use_global_obs", "vision_radius", "max_steps", "render_mode", "debug_mode", "fixed_agent_loc", "fixed_goal_loc", "obstacle_map", "danger_func"
     ]:
         if hasattr(args, k):
             GLOBAL_ENV_CONFIG[k] = getattr(args, k)
