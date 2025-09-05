@@ -7,7 +7,7 @@ import pygame  # 导入pygame以备渲染器使用
 
 from ..core.constants import OBJECT_TO_IDX, DIRECTIONS, CELL_SIZE
 from ..core.config_utils import resolve_callable
-from ..utils.enemy_movement import normalize_movement_spec
+from ..utils.movement_func import normalize_movement_spec
 from ..core.agent import Agent
 from ..rendering.pygame_renderer import PyGameRenderer
 
@@ -107,6 +107,18 @@ class GridWorldEnv(gym.Env):
         self.enemy_movement = enemy_movement
         self._enemy_movement_callable = None
         # base_grid和danger_map推迟到reset时初始化
+
+        # 如果用户在构造时通过短名或 dict 传入了函数规格，则立即解析为 callable
+        try:
+            if isinstance(self.danger_func, (str, dict)):
+                self.danger_func = resolve_callable(self.danger_func, kind='danger')
+        except Exception:
+            raise
+        try:
+            if isinstance(self.enemy_movement, (str, dict)):
+                self.enemy_movement = resolve_callable(self.enemy_movement, kind='movement')
+        except Exception:
+            raise
 
         # --- 定义观测空间和动作空间 ---
         self.action_space = spaces.Discrete(4)
@@ -232,7 +244,7 @@ class GridWorldEnv(gym.Env):
             elif callable(spec) or isinstance(spec, str):
                 # 全局 callable
                 try:
-                    self._enemy_movement_callable = resolve_callable(spec)
+                    self._enemy_movement_callable = resolve_callable(spec, kind='movement')
                 except Exception:
                     if callable(spec):
                         self._enemy_movement_callable = spec
@@ -246,7 +258,7 @@ class GridWorldEnv(gym.Env):
                         callables.append(None)
                         continue
                     if isinstance(item, str):
-                        callables.append(resolve_callable(item))
+                        callables.append(resolve_callable(item, kind='movement'))
                     elif callable(item):
                         callables.append(item)
                     else:
@@ -277,6 +289,7 @@ class GridWorldEnv(gym.Env):
             try:
                 moved_any = False
                 for agent in self._enemy_agents:
+                    # 让Agent根据其move_fn移动一次
                     moved = agent.move(self, self._step_count)
                     if moved:
                         moved_any = True

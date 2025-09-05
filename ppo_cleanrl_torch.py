@@ -192,9 +192,9 @@ if __name__ == "__main__":
     try:
         from gymnasium_minigrid.core.config_utils import resolve_callable
         if "danger_func" in GLOBAL_ENV_CONFIG and GLOBAL_ENV_CONFIG["danger_func"] is not None:
-            GLOBAL_ENV_CONFIG["danger_func"] = resolve_callable(GLOBAL_ENV_CONFIG["danger_func"])
+            GLOBAL_ENV_CONFIG["danger_func"] = resolve_callable(GLOBAL_ENV_CONFIG["danger_func"], kind='danger')
         if "enemy_movement" in GLOBAL_ENV_CONFIG:
-            GLOBAL_ENV_CONFIG["enemy_movement"] = resolve_callable(GLOBAL_ENV_CONFIG["enemy_movement"])
+            GLOBAL_ENV_CONFIG["enemy_movement"] = resolve_callable(GLOBAL_ENV_CONFIG["enemy_movement"], kind='movement')
     except Exception:
         pass
 

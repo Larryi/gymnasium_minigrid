@@ -24,7 +24,7 @@ class Agent:
     def move(self, env: Any, step_count: int):
         """调用 move_fn（若存在），并在成功时更新 self.position。
 
-        返回: True 如果位置发生更新，False 否则。
+        返回: True 如果位置发生更新。
         """
         if self.move_fn is None:
             return False
