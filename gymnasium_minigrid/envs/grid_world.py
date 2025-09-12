@@ -319,9 +319,9 @@ class GridWorldEnv(gym.Env):
             # 撞墙则位置不变
 
         else:
-            prev_dist = np.linalg.norm(self._agent_location - self._goal_location, ord=1)
+            prev_dist = np.linalg.norm(self._agent_location - self._goal_location)
             self._agent_location = new_location
-            curr_dist = np.linalg.norm(self._agent_location - self._goal_location, ord=1)
+            curr_dist = np.linalg.norm(self._agent_location - self._goal_location)
 
             # reward shaping: 靠近目标给予微小奖励
             reward += 0.25 * (prev_dist - curr_dist)
