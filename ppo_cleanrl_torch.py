@@ -184,16 +184,17 @@ if __name__ == "__main__":
     GLOBAL_ENV_CONFIG = {}
     for k in [
         "width", "height", "enemy_locations", "danger_radius", "danger_threshold", "init_safe_threshold",
-        "use_global_obs", "vision_radius", "max_steps", "render_mode", "debug_mode", "fixed_agent_loc", "fixed_goal_loc", "obstacle_map", "danger_func"
+        "use_global_obs", "vision_radius", "max_steps", "render_mode", "debug_mode", "fixed_agent_loc", "fixed_goal_loc", "obstacle_map", "danger_func", "enemy_movement"
     ]:
         if hasattr(args, k):
             GLOBAL_ENV_CONFIG[k] = getattr(args, k)
 
-    # 解析 danger_func
     try:
         from gymnasium_minigrid.core.config_utils import resolve_callable
         if "danger_func" in GLOBAL_ENV_CONFIG and GLOBAL_ENV_CONFIG["danger_func"] is not None:
-            GLOBAL_ENV_CONFIG["danger_func"] = resolve_callable(GLOBAL_ENV_CONFIG["danger_func"])
+            GLOBAL_ENV_CONFIG["danger_func"] = resolve_callable(GLOBAL_ENV_CONFIG["danger_func"], kind='danger')
+        if "enemy_movement" in GLOBAL_ENV_CONFIG:
+            GLOBAL_ENV_CONFIG["enemy_movement"] = resolve_callable(GLOBAL_ENV_CONFIG["enemy_movement"], kind='movement')
     except Exception:
         pass
 

@@ -9,7 +9,8 @@ env:
     - [null, null]
     - [null, null]
     - [null, null]
-  danger_func: circular_danger_func
+  danger_func: circular
+  enemy_movement: random_walk
   danger_radius: 15
   danger_threshold: 0.7
   init_safe_threshold: 0.3
@@ -25,7 +26,7 @@ env:
   fixed_goal_loc: null
 
 ppo:
-  load_path: trained_models/gymnasium_minigrid/GridWorld-v0__PPO_Basic_3__1__1755829030/model.pt                 # 预训练模型路径，请手动指定
+  load_path: null                 # 预训练模型路径，请手动指定
   track: true                     # 是否启用实验追踪
   seed: 1                         # 随机种子
   cuda: false                     # 是否使用CUDA设备

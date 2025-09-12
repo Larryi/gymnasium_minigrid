@@ -6,6 +6,9 @@ import numpy as np
 import pygame  # 导入pygame以备渲染器使用
 
 from ..core.constants import OBJECT_TO_IDX, DIRECTIONS, CELL_SIZE
+from ..core.config_utils import resolve_callable
+from ..utils.movement_func import normalize_movement_spec
+from ..core.agent import Agent
 from ..rendering.pygame_renderer import PyGameRenderer
 
 # --- 默认危险函数 ---
@@ -75,8 +78,9 @@ class GridWorldEnv(gym.Env):
         render_mode=None,
         debug_mode=False,
         fixed_agent_loc=None,
-        fixed_goal_loc=None
-    ):
+        fixed_goal_loc=None,
+        enemy_movement=None
+    ): 
         super().__init__()
 
         self.width = width
@@ -97,8 +101,24 @@ class GridWorldEnv(gym.Env):
         # 保存enemy_locations模板，实际位置在reset时生成
         self._enemy_locations_template = enemy_locations if enemy_locations is not None else []
         self._enemy_locations = np.empty((0,2), dtype=int)
+        # Agent 列表（每个敌人对应一个 Agent 实例）
+        self._enemy_agents = []
         self._obstacle_map = obstacle_map
+        self.enemy_movement = enemy_movement
+        self._enemy_movement_callable = None
         # base_grid和danger_map推迟到reset时初始化
+
+        # 如果用户在构造时通过短名或 dict 传入了函数规格，则立即解析为 callable
+        try:
+            if isinstance(self.danger_func, (str, dict)):
+                self.danger_func = resolve_callable(self.danger_func, kind='danger')
+        except Exception:
+            raise
+        try:
+            if isinstance(self.enemy_movement, (str, dict)):
+                self.enemy_movement = resolve_callable(self.enemy_movement, kind='movement')
+        except Exception:
+            raise
 
         # --- 定义观测空间和动作空间 ---
         self.action_space = spaces.Discrete(4)
@@ -213,12 +233,76 @@ class GridWorldEnv(gym.Env):
 
         self._step_count = 0
 
+        # 解析 enemy_movement 为可调用对象或 per-enemy 列表
+        self._enemy_movement_callable = None
+        self._enemy_movement_callables = None
+        if self.enemy_movement is not None:
+            # 规范化传入规格（可能是单个、列表或字典）
+            spec = normalize_movement_spec(self.enemy_movement, len(self._enemy_locations))
+            if spec is None:
+                self._enemy_movement_callable = None
+            elif callable(spec) or isinstance(spec, str):
+                # 全局 callable
+                try:
+                    self._enemy_movement_callable = resolve_callable(spec, kind='movement')
+                except Exception:
+                    if callable(spec):
+                        self._enemy_movement_callable = spec
+                    else:
+                        raise
+            else:
+                # 按敌人列表解析每个元素
+                callables = []
+                for item in spec:
+                    if item is None:
+                        callables.append(None)
+                        continue
+                    if isinstance(item, str):
+                        callables.append(resolve_callable(item, kind='movement'))
+                    elif callable(item):
+                        callables.append(item)
+                    else:
+                        raise TypeError("每个 enemy_movement 列表元素必须为 str 或 callable 或 None")
+                self._enemy_movement_callables = callables
+
+        # --- 创建 Agent 实例并分配 move_fn ---
+        self._enemy_agents = []
+        for i in range(len(self._enemy_locations)):
+            pos = self._enemy_locations[i].copy()
+            move_fn = None
+            if self._enemy_movement_callables is not None:
+                move_fn = self._enemy_movement_callables[i]
+            elif self._enemy_movement_callable is not None:
+                # 全局 callable
+                move_fn = self._enemy_movement_callable
+            agent = Agent(index=i, position=pos, team=None, move_fn=move_fn)
+            self._enemy_agents.append(agent)
+
         if self.render_mode == "human":
             self.render()
 
         return self._get_obs(), self._get_info()
 
     def step(self, action):
+        # 在应用主控Agent动作之前，先Agent.move
+        if len(self._enemy_agents) > 0:
+            try:
+                moved_any = False
+                for agent in self._enemy_agents:
+                    # 让Agent根据其move_fn移动一次
+                    moved = agent.move(self, self._step_count)
+                    if moved:
+                        moved_any = True
+                if moved_any:
+                    # 同步回 _enemy_locations
+                    new_positions = np.array([ag.position for ag in self._enemy_agents], dtype=int)
+                    self._enemy_locations = new_positions
+                    # 更新网格和危险图
+                    self._base_grid = self._create_base_grid(self._obstacle_map, enemy_locations=self._enemy_locations)
+                    self._danger_map = self.danger_func((self.height, self.width), self._enemy_locations, self.danger_radius)
+            except Exception as e:
+                print(f"Warning: Agent-based enemy movement 调用失败: {e}")
+
         # 1. 计算新位置
         direction = DIRECTIONS[action]
         new_location = self._agent_location + direction
@@ -235,9 +319,9 @@ class GridWorldEnv(gym.Env):
             # 撞墙则位置不变
 
         else:
-            prev_dist = np.linalg.norm(self._agent_location - self._goal_location, ord=1)
+            prev_dist = np.linalg.norm(self._agent_location - self._goal_location)
             self._agent_location = new_location
-            curr_dist = np.linalg.norm(self._agent_location - self._goal_location, ord=1)
+            curr_dist = np.linalg.norm(self._agent_location - self._goal_location)
 
             # reward shaping: 靠近目标给予微小奖励
             reward += 0.25 * (prev_dist - curr_dist)

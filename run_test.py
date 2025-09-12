@@ -26,7 +26,8 @@ def main():
         "vision_radius": 10,
         "render_mode": "human",  # 设置为 "human" 以显示PyGame窗口
         "debug_mode": True,  # 设置为Debug模式，输出更多信息
-        "danger_func": resolve_callable('circular_danger_func')
+        "danger_func": resolve_callable('circular', kind='danger'),
+        "enemy_movement": resolve_callable('random_walk', kind='movement')
     }
 
     # 使用 gymnasium.make 创建环境实例，使用**env_config解包传参来覆盖默认参数
